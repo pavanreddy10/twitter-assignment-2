@@ -119,12 +119,82 @@ app.post("/login/", async (request, response) => {
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   const { username } = request;
   const getTweetRequest = `
-  SELECT 
-  *
-  FROM 
-  user
-  WHERE username = "${username}";
+  SELECT
+    username, tweet, date_time AS dateTime
+    FROM
+    (user INNER JOIN (
+        SELECT
+        following_user_id
+        FROM
+        user INNER JOIN follower ON user.user_id = follower.follower_user_id
+        WHERE 
+        user.username = "${username}"
+    ) AS P ON user.user_id = P.following_user_id
+    ) INNER JOIN tweet ON P.following_user_id = tweet.user_id
+    ORDER BY tweet.date_time DESC
+    LIMIT 4;
   `;
   const getTweetResult = await db.all(getTweetRequest);
   response.send(getTweetResult);
 });
+
+//API 4
+
+app.get("/user/following/", authenticateToken, async (request, response) => {
+  const { username } = request;
+  const getFollowingQuery = `
+    SELECT
+    name
+    FROM
+    user INNER JOIN (
+        SELECT
+        following_user_id
+        FROM
+        user INNER JOIN follower ON user.user_id = follower.follower_user_id
+        WHERE 
+        user.username = "${username}"
+    ) ON user_id = following_user_id;    
+    `;
+  const getFollowingResult = await db.all(getFollowingQuery);
+  response.send(getFollowingResult);
+});
+
+//API 5
+
+app.get("/user/followers/", authenticateToken, async (request, response) => {
+  const { username } = request;
+  const getFollowerQuery = `
+    SELECT
+    name
+    FROM
+    user INNER JOIN (
+        SELECT
+        follower_user_id
+        FROM
+        user INNER JOIN follower ON user.user_id = follower.following_user_id
+        WHERE 
+        user.username = "${username}"
+    ) ON user_id = follower_user_id;
+    `;
+  const getFollowerResult = await db.all(getFollowerQuery);
+  response.send(getFollowerResult);
+});
+
+//API 6
+
+app.get("/tweets/:tweetId/", authenticateToken, async (request, response) => {
+  const { username } = request;
+  const { tweetId } = request.params;
+  const getTweetQuery = `
+  SELECT
+  tweet, (
+      SELECT COUNT(*)
+      FROM like
+      WHERE 
+  )
+  FROM 
+  user INNER JOIN 
+  `;
+});
+
+module.exports = app;
